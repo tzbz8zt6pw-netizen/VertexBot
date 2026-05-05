@@ -5,12 +5,12 @@ const TelegramBot = require("node-telegram-bot-api");
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 
 const CHAT_ID = process.env.CHAT_ID;
-
-// TEST_MODE=true sends all messages instantly
 const TEST_MODE = process.env.TEST_MODE === "true";
 
-// Normal auto-post interval
-const POST_INTERVAL_HOURS = 6;
+const TIMEZONE = "Europe/London";
+
+// Posts every 4 hours, but only between 6am and 10pm UK time
+const POST_INTERVAL_HOURS = 4;
 const POST_INTERVAL_MS = POST_INTERVAL_HOURS * 60 * 60 * 1000;
 
 const messages = [
@@ -18,19 +18,19 @@ const messages = [
 
 Let us handle the passing while you focus on scaling a funded account 📈
 
-Message us “READY” and I’ll break everything down for you🫡✅`,
+Message us "READY" and I’ll break everything down for you 🫡✅`,
 
-`Ready to Get Funded Without the Stress?👊🏻
+`Ready to Get Funded Without the Stress? 👊🏻
 
-At Vertex, we specialize in passing prop firm challenges for you — so you can skip the pressure and go straight to trading funded capital🤝
+At Vertex, we specialize in passing prop firm challenges for you — so you can skip the pressure and go straight to trading funded capital 🤝
 
 No time to waste, DM us to get started 🫡`,
 
-`Stop Failing Challenges. Start Trading Funded💰 
+`Stop Failing Challenges. Start Trading Funded 💰
 
-At Vertex, we don’t guess — we execute🫡
+At Vertex, we don’t guess — we execute 🫡
 
-We help traders secure funded accounts by passing prop firm challenges on their behalf, using disciplined strategies and strict risk management📈
+We help traders secure funded accounts by passing prop firm challenges on their behalf, using disciplined strategies and strict risk management 📈
 
 💼 Why traders choose us:
 • Consistent results
@@ -38,7 +38,7 @@ We help traders secure funded accounts by passing prop firm challenges on their 
 • Fast, efficient delivery
 • Zero emotional trading
 
-Ready to start? Message “FUNDED” to get started 👊🏻`,
+Ready to start? Message "FUNDED" to get started 👊🏻`,
 
 `Still blowing accounts? Be honest.
 
@@ -49,7 +49,7 @@ That’s where Vertex comes in.
 We pass prop firm challenges for you — simple.
 
 ✔️ We pass
-✔️ You pay 
+✔️ You pay
 ✔️ You get funded
 
 💸 Discounts live right now — but not for long.
@@ -59,128 +59,90 @@ Stop repeating the same cycle.
 📩 DM now before slots fill.`
 ];
 
-let currentMessageIndex = 0;
+let currentIndex = 0;
+
+function getUKHour() {
+  const ukTime = new Date().toLocaleString("en-GB", {
+    timeZone: TIMEZONE,
+    hour: "2-digit",
+    hour12: false
+  });
+
+  return Number(ukTime);
+}
+
+function isWithinPostingWindow() {
+  const hour = getUKHour();
+
+  // Posts from 06:00 up to 21:59 UK time
+  return hour >= 6 && hour < 22;
+}
 
 async function sendMessage() {
-  const message = messages[currentMessageIndex];
+  try {
+    const message = messages[currentIndex];
 
-  await bot.sendMessage(CHAT_ID, message);
+    await bot.sendMessage(CHAT_ID, message);
 
-  console.log(`Sent message ${currentMessageIndex + 1}`);
+    console.log(`✅ Sent message ${currentIndex + 1}`);
 
-  currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+    currentIndex = (currentIndex + 1) % messages.length;
+  } catch (error) {
+    console.error("❌ Send error:", error.message);
+  }
 }
 
 async function sendAllMessages() {
-  for (const message of messages) {
-    await bot.sendMessage(CHAT_ID, message);
-    await new Promise(resolve => setTimeout(resolve, 1500));
+  console.log("🚀 TEST MODE: Sending all messages instantly...");
+
+  for (let i = 0; i < messages.length; i++) {
+    try {
+      await bot.sendMessage(CHAT_ID, messages[i]);
+      console.log(`✅ Sent test message ${i + 1}`);
+
+      await new Promise(resolve => setTimeout(resolve, 1500));
+    } catch (error) {
+      console.error("❌ Test send error:", error.message);
+    }
   }
 
-  console.log("All test messages sent.");
+  console.log("✅ Test mode complete.");
 }
 
 async function startBot() {
   if (!process.env.BOT_TOKEN) {
-    console.error("Missing BOT_TOKEN");
+    console.error("❌ Missing BOT_TOKEN in Railway variables.");
     return;
   }
 
   if (!CHAT_ID) {
-    console.error("Missing CHAT_ID");
+    console.error("❌ Missing CHAT_ID in Railway variables.");
     return;
   }
 
-  console.log("Telegram bot started.");
+  console.log("🤖 Telegram bot started.");
+  console.log(`🕒 Posting window: 06:00 - 22:00 UK time`);
+  console.log(`⏱ Interval: every ${POST_INTERVAL_HOURS} hours`);
 
   if (TEST_MODE) {
     await sendAllMessages();
     return;
   }
 
-  await sendMessage();
+  if (isWithinPostingWindow()) {
+    await sendMessage();
+  } else {
+    console.log("⏸ Bot started outside posting window. Waiting for next interval.");
+  }
 
   setInterval(async () => {
-    try {
-      await sendMessage();
-    } catch (error) {
-      console.error("Failed to send Telegram message:", error.message);
+    if (!isWithinPostingWindow()) {
+      console.log("⏸ Outside posting window. Skipping post.");
+      return;
     }
+
+    await sendMessage();
   }, POST_INTERVAL_MS);
 }
 
-startBot();💼 Why traders choose us:
-• Consistent results
-• Professional risk control
-• Fast, efficient delivery
-• Zero emotional trading
-
-Ready to start? Message “FUNDED” to get started 👊🏻`,
-
-`Still blowing accounts? Be honest.
-
-Most traders fail challenges not because they’re stupid — but because they lack consistency and discipline.
-
-That’s where Vertex comes in.
-
-We pass prop firm challenges for you — simple.
-
-✔️ We pass
-✔️ You pay 
-✔️ You get funded
-
-💸 Discounts live right now — but not for long.
-
-Stop repeating the same cycle.
-
-📩 DM now before slots fill.`
-];
-
-let currentMessageIndex = 0;
-
-async function sendMessage(channel) {
-  const message = messages[currentMessageIndex];
-
-  await channel.send(message);
-
-  console.log(`Sent message ${currentMessageIndex + 1}`);
-
-  currentMessageIndex = (currentMessageIndex + 1) % messages.length;
-}
-
-async function sendAllMessages(channel) {
-  for (const message of messages) {
-    await channel.send(message);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-  }
-
-  console.log("All test messages sent.");
-}
-
-client.once(Events.ClientReady, async () => {
-  console.log(`Logged in as ${client.user.tag}`);
-
-  const channel = await client.channels.fetch(CHANNEL_ID);
-
-  if (!channel) {
-    console.error("Channel not found. Check CHANNEL_ID.");
-    return;
-  }
-
-  if (TEST_MODE) {
-    await sendAllMessages(channel);
-    return;
-  }
-
-  await sendMessage(channel);
-
-  setInterval(async () => {
-    try {
-      await sendMessage(channel);
-    } catch (error) {
-      console.error("Failed to send message:", error);
-    }
-  }, POST_INTERVAL_MS);
-});
-
-client.login(process.env.DISCORD_TOKEN);
+startBot();
