@@ -2,17 +2,22 @@ require("dotenv").config();
 
 const TelegramBot = require("node-telegram-bot-api");
 
+// Create bot
 const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 
+// ENV
 const CHAT_ID = process.env.CHAT_ID;
-const TEST_MODE = process.env.TEST_MODE === "true";
+
+// 🔒 SAFER TEST MODE PARSE
+const TEST_MODE = String(process.env.TEST_MODE).trim().toLowerCase() === "true";
 
 const TIMEZONE = "Europe/London";
 
-// Posts every 4 hours, but only between 6am and 10pm UK time
+// Posting interval
 const POST_INTERVAL_HOURS = 4;
 const POST_INTERVAL_MS = POST_INTERVAL_HOURS * 60 * 60 * 1000;
 
+// Messages
 const messages = [
 `Blown challenges. Overtrading. Inconsistent results. Sound familiar? 🤔
 
@@ -61,23 +66,22 @@ Stop repeating the same cycle.
 
 let currentIndex = 0;
 
+// Get UK hour safely
 function getUKHour() {
-  const ukTime = new Date().toLocaleString("en-GB", {
-    timeZone: TIMEZONE,
-    hour: "2-digit",
-    hour12: false
-  });
-
-  return Number(ukTime);
+  const now = new Date();
+  const ukTime = new Date(
+    now.toLocaleString("en-GB", { timeZone: TIMEZONE })
+  );
+  return ukTime.getHours();
 }
 
+// Check window (6am–10pm)
 function isWithinPostingWindow() {
   const hour = getUKHour();
-
-  // Posts from 06:00 up to 21:59 UK time
   return hour >= 6 && hour < 22;
 }
 
+// Send single message
 async function sendMessage() {
   try {
     const message = messages[currentIndex];
@@ -87,61 +91,71 @@ async function sendMessage() {
     console.log(`✅ Sent message ${currentIndex + 1}`);
 
     currentIndex = (currentIndex + 1) % messages.length;
+
   } catch (error) {
     console.error("❌ Send error:", error.message);
   }
 }
 
+// Send all (TEST MODE)
 async function sendAllMessages() {
-  console.log("🚀 TEST MODE: Sending all messages instantly...");
+  console.log("🚀 TEST MODE ACTIVE: Sending ALL messages...");
 
   for (let i = 0; i < messages.length; i++) {
     try {
       await bot.sendMessage(CHAT_ID, messages[i]);
       console.log(`✅ Sent test message ${i + 1}`);
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(res => setTimeout(res, 1200));
+
     } catch (error) {
       console.error("❌ Test send error:", error.message);
     }
   }
 
-  console.log("✅ Test mode complete.");
+  console.log("✅ Finished sending all test messages.");
 }
 
+// Main start
 async function startBot() {
   if (!process.env.BOT_TOKEN) {
-    console.error("❌ Missing BOT_TOKEN in Railway variables.");
+    console.error("❌ Missing BOT_TOKEN");
     return;
   }
 
   if (!CHAT_ID) {
-    console.error("❌ Missing CHAT_ID in Railway variables.");
+    console.error("❌ Missing CHAT_ID");
     return;
   }
 
-  console.log("🤖 Telegram bot started.");
-  console.log(`🕒 Posting window: 06:00 - 22:00 UK time`);
-  console.log(`⏱ Interval: every ${POST_INTERVAL_HOURS} hours`);
+  console.log("🤖 Bot started");
+  console.log("TEST_MODE raw:", process.env.TEST_MODE);
+  console.log("TEST_MODE active:", TEST_MODE);
+  console.log("Messages loaded:", messages.length);
+  console.log("UK Hour now:", getUKHour());
 
+  // 🔥 TEST MODE RUNS IMMEDIATELY
   if (TEST_MODE) {
     await sendAllMessages();
     return;
   }
 
+  // Normal mode
   if (isWithinPostingWindow()) {
     await sendMessage();
   } else {
-    console.log("⏸ Bot started outside posting window. Waiting for next interval.");
+    console.log("⏸ Outside posting window. Waiting...");
   }
 
+  // Loop
   setInterval(async () => {
     if (!isWithinPostingWindow()) {
-      console.log("⏸ Outside posting window. Skipping post.");
+      console.log("⏸ Outside posting window. Skipping.");
       return;
     }
 
     await sendMessage();
+
   }, POST_INTERVAL_MS);
 }
 
