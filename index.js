@@ -1,17 +1,15 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits, Events } = require("discord.js");
+const TelegramBot = require("node-telegram-bot-api");
 
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds]
-});
+const bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
 
-const CHANNEL_ID = process.env.CHANNEL_ID;
+const CHAT_ID = process.env.CHAT_ID;
 
-// Set TEST_MODE=true in Railway to send all messages instantly
+// TEST_MODE=true sends all messages instantly
 const TEST_MODE = process.env.TEST_MODE === "true";
 
-// Time between normal auto-posts
+// Normal auto-post interval
 const POST_INTERVAL_HOURS = 6;
 const POST_INTERVAL_MS = POST_INTERVAL_HOURS * 60 * 60 * 1000;
 
@@ -35,6 +33,83 @@ At Vertex, we don’t guess — we execute🫡
 We help traders secure funded accounts by passing prop firm challenges on their behalf, using disciplined strategies and strict risk management📈
 
 💼 Why traders choose us:
+• Consistent results
+• Professional risk control
+• Fast, efficient delivery
+• Zero emotional trading
+
+Ready to start? Message “FUNDED” to get started 👊🏻`,
+
+`Still blowing accounts? Be honest.
+
+Most traders fail challenges not because they’re stupid — but because they lack consistency and discipline.
+
+That’s where Vertex comes in.
+
+We pass prop firm challenges for you — simple.
+
+✔️ We pass
+✔️ You pay 
+✔️ You get funded
+
+💸 Discounts live right now — but not for long.
+
+Stop repeating the same cycle.
+
+📩 DM now before slots fill.`
+];
+
+let currentMessageIndex = 0;
+
+async function sendMessage() {
+  const message = messages[currentMessageIndex];
+
+  await bot.sendMessage(CHAT_ID, message);
+
+  console.log(`Sent message ${currentMessageIndex + 1}`);
+
+  currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+}
+
+async function sendAllMessages() {
+  for (const message of messages) {
+    await bot.sendMessage(CHAT_ID, message);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+  }
+
+  console.log("All test messages sent.");
+}
+
+async function startBot() {
+  if (!process.env.BOT_TOKEN) {
+    console.error("Missing BOT_TOKEN");
+    return;
+  }
+
+  if (!CHAT_ID) {
+    console.error("Missing CHAT_ID");
+    return;
+  }
+
+  console.log("Telegram bot started.");
+
+  if (TEST_MODE) {
+    await sendAllMessages();
+    return;
+  }
+
+  await sendMessage();
+
+  setInterval(async () => {
+    try {
+      await sendMessage();
+    } catch (error) {
+      console.error("Failed to send Telegram message:", error.message);
+    }
+  }, POST_INTERVAL_MS);
+}
+
+startBot();💼 Why traders choose us:
 • Consistent results
 • Professional risk control
 • Fast, efficient delivery
