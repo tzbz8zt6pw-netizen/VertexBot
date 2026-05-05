@@ -1,13 +1,12 @@
 {
-  "name": "vertex-discord-bot",
+  "name": "vertex-telegram-bot",
   "version": "1.0.0",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "discord.js": "^14.26.4",
+    "node-telegram-bot-api": "^0.66.0",
     "dotenv": "^16.4.7"
   }
 }
